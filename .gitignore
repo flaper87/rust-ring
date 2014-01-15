@@ -1,0 +1,6 @@
+.rust
+bin
+lib
+build
+*.so
+rustpkg_db.json
