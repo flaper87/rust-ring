@@ -6,7 +6,7 @@ use std::rand::{task_rng, Rng};
 
 use ssl::crypto::hash::{hash, MD5};
 
-struct RingPartitioned<'a> {
+struct Ring<'a> {
     name: ~str,
     nodes: HashMap<uint, HashMap<~str, uint>>,
 
@@ -17,12 +17,27 @@ struct RingPartitioned<'a> {
     partitions: ~[uint],
 }
 
-trait Ring {
+impl<'a> Ring<'a> {
+
+    fn new(name: ~str, part_power: uint, replicas: uint) -> Ring<'a> {
+
+        Ring {
+            name: name,
+            nodes: HashMap::new(),
+            replicas: replicas,
+            shift: 32 - part_power,
+            part_power: part_power,
+            partitions: ~[]}
+
+    }
 
     /**
      * Generate an id for str
      **/
-    fn get_id<'a>(&'a self, id: &str) -> u32;
+    fn get_id<'a>(&'a self, id: &str) -> u32 {
+       let sh = hash(MD5, id.as_bytes());
+       sh.hash() as u32 >> self.shift
+    }
 
     /**
      * Rebalance the ring.
@@ -30,26 +45,6 @@ trait Ring {
      * Rebalances the ring after adding or removing
      * nodes to it.
      **/
-    fn rebalance<'a>(&'a mut self) -> ();
-
-    /**
-     * Gets a list of nodes for `id`
-     **/
-    fn get_nodes<'a>(&'a self, id: &str) -> ~[&'a HashMap<~str, uint>];
-
-    /**
-     * Gets a list of nodes for `id`
-     **/
-    fn add_node<'a>(&'a mut self, node: HashMap<~str, uint>) -> ();
-}
-
-impl<'a> Ring for RingPartitioned<'a> {
-
-    fn get_id<'a>(&'a self, id: &str) -> u32 {
-       let sh = hash(MD5, id.as_bytes());
-       sh.hash() as u32 >> self.shift
-    }
-
     fn rebalance<'a>(&'a mut self) -> () {
 
         // No nodes nor partitions. Nothing
@@ -81,11 +76,9 @@ impl<'a> Ring for RingPartitioned<'a> {
     }
 
 
-    fn add_node<'a>(&'a mut self, node: HashMap<~str, uint>) -> () {
-        let new_id = self.nodes.len() + 2;
-        self.nodes.insert(new_id, node);
-    }
-
+    /**
+     * Gets a list of nodes for `id`
+     **/
     fn get_nodes<'a>(&'a self, id: &str) -> ~[&'a HashMap<~str, uint>] {
         let mut part = self.get_id(id);
         let mut nodes = ~[];
@@ -111,20 +104,13 @@ impl<'a> Ring for RingPartitioned<'a> {
         nodes
     }
 
-}
 
-impl<'a> RingPartitioned<'a> {
-
-    fn new(name: ~str, part_power: uint, replicas: uint) -> RingPartitioned<'a> {
-
-        RingPartitioned {
-            name: name,
-            nodes: HashMap::new(),
-            replicas: replicas,
-            shift: 32 - part_power,
-            part_power: part_power,
-            partitions: ~[]}
-
+    /**
+     * Gets a list of nodes for `id`
+     **/
+    fn add_node<'a>(&'a mut self, node: HashMap<~str, uint>) -> () {
+        let new_id = self.nodes.len() + 2;
+        self.nodes.insert(new_id, node);
     }
 }
 
@@ -134,10 +120,9 @@ mod tests {
     use std::hashmap::HashMap;
 
     use ring::Ring;
-    use ring::RingPartitioned;
 
-    fn get_ring(nodes: uint) -> RingPartitioned {
-        let mut ring = RingPartitioned::new(~"test", 16, 3);
+    fn get_ring(nodes: uint) -> Ring {
+        let mut ring = Ring::new(~"test", 16, 3);
 
         // Add some nodes
         for nid in range(1u, nodes) {
