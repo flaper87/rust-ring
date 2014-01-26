@@ -1,11 +1,10 @@
-extern mod rust_crypto = "github.com/DaGenix/rust-crypto#rust-crypto:0.1";
+extern mod ssl = "github.com/sfackler/rust-openssl#openssl:0.0";
 
 use std::hash::Hash;
 use std::hashmap::HashMap;
 use std::rand::{task_rng, Rng};
 
-use rust_crypto::md5::Md5;
-use rust_crypto::digest::Digest;
+use ssl::crypto::hash::{hash, MD5};
 
 struct RingPartitioned<'a> {
     name: ~str,
@@ -47,9 +46,8 @@ trait Ring {
 impl<'a> Ring for RingPartitioned<'a> {
 
     fn get_id<'a>(&'a self, id: &str) -> u32 {
-       let mut sh = Md5::new();
-       sh.input_str(id);
-       sh.result_str().hash() as u32 >> self.shift
+       let sh = hash(MD5, id.as_bytes());
+       sh.hash() as u32 >> self.shift
     }
 
     fn rebalance<'a>(&'a mut self) -> () {

@@ -1,7 +1,9 @@
-#[crate_id = "ring#0.1"];
+#[crate_id = "github.com/flaper87/rust-ring#rust-ring:0.1"];
 #[desc = "Consistent hashing ring lib for Rust"];
 #[license = "MIT"];
 #[crate_type = "lib"];
 
-extern mod rust_crypto = "github.com/DaGenix/rust-crypto#rust-crypto:0.1";
+extern mod extra;
+
+extern mod ssl = "github.com/sfackler/rust-openssl#openssl:0.0";
 pub mod ring;
